@@ -332,4 +332,204 @@ router.get('/stats/dashboard', async (req, res) => {
     }
 });
 
+// 👥 CLIENTS ROUTES
+
+// Get all clients
+router.get('/clients', async (req, res) => {
+    try {
+        const clients = await db.getAllClients();
+        res.json({
+            success: true,
+            data: clients,
+            count: clients.length
+        });
+    } catch (error) {
+        console.error('Error fetching clients:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore nel recupero dei clienti'
+        });
+    }
+});
+
+// Get client by ID with works history
+router.get('/clients/:id', async (req, res) => {
+    try {
+        const client = await db.getClientById(req.params.id);
+        if (!client) {
+            return res.status(404).json({
+                success: false,
+                error: 'Cliente non trovato'
+            });
+        }
+
+        const works = await db.getClientWorks(req.params.id);
+
+        res.json({
+            success: true,
+            data: {
+                ...client,
+                works: works
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching client:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore nel recupero del cliente'
+        });
+    }
+});
+
+// Create new client
+router.post('/clients', async (req, res) => {
+    try {
+        const { name, phone, email, address } = req.body;
+
+        if (!name) {
+            return res.status(400).json({
+                success: false,
+                error: 'Nome cliente obbligatorio'
+            });
+        }
+
+        const newClient = {
+            id: 'C' + Date.now().toString().slice(-6),
+            name,
+            phone: phone || '',
+            email: email || '',
+            address: address || '',
+            vehicles: []
+        };
+
+        const client = await db.createClient(newClient);
+        res.status(201).json({
+            success: true,
+            data: client,
+            message: 'Cliente creato con successo'
+        });
+    } catch (error) {
+        console.error('Error creating client:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore nella creazione del cliente'
+        });
+    }
+});
+
+// 💰 ESTIMATES ROUTES
+
+// Get all estimates
+router.get('/estimates', async (req, res) => {
+    try {
+        const estimates = await db.getAllEstimates();
+        res.json({
+            success: true,
+            data: estimates,
+            count: estimates.length
+        });
+    } catch (error) {
+        console.error('Error fetching estimates:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore nel recupero dei preventivi'
+        });
+    }
+});
+
+// Get estimate by ID
+router.get('/estimates/:id', async (req, res) => {
+    try {
+        const estimate = await db.getEstimateById(req.params.id);
+        if (!estimate) {
+            return res.status(404).json({
+                success: false,
+                error: 'Preventivo non trovato'
+            });
+        }
+        res.json({
+            success: true,
+            data: estimate
+        });
+    } catch (error) {
+        console.error('Error fetching estimate:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore nel recupero del preventivo'
+        });
+    }
+});
+
+// Create new estimate
+router.post('/estimates', async (req, res) => {
+    try {
+        const { client_id, vehicle, description, department, priority, labor_hours, labor_rate, parts_cost, notes } = req.body;
+
+        if (!client_id || !vehicle || !description || !department || !priority) {
+            return res.status(400).json({
+                success: false,
+                error: 'Campi obbligatori mancanti'
+            });
+        }
+
+        const laborCost = (labor_hours || 0) * (labor_rate || 0);
+        const totalCost = laborCost + (parts_cost || 0);
+
+        const newEstimate = {
+            id: 'E' + Date.now().toString().slice(-6),
+            client_id,
+            vehicle,
+            description,
+            department,
+            priority,
+            labor_hours: labor_hours || 0,
+            labor_rate: labor_rate || 45.00,
+            labor_cost: laborCost,
+            parts_cost: parts_cost || 0,
+            total_cost: totalCost,
+            status: 'pending',
+            valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 giorni
+            notes: notes || ''
+        };
+
+        const estimate = await db.createEstimate(newEstimate);
+        res.status(201).json({
+            success: true,
+            data: estimate,
+            message: 'Preventivo creato con successo'
+        });
+    } catch (error) {
+        console.error('Error creating estimate:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore nella creazione del preventivo'
+        });
+    }
+});
+
+// Convert estimate to work
+router.post('/estimates/:id/convert', async (req, res) => {
+    try {
+        const work = await db.convertEstimateToWork(req.params.id);
+        if (!work) {
+            return res.status(404).json({
+                success: false,
+                error: 'Preventivo non trovato'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: work,
+            message: 'Preventivo convertito in lavoro con successo'
+        });
+    } catch (error) {
+        console.error('Error converting estimate:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore nella conversione del preventivo'
+        });
+    }
+});
+
 module.exports = router;

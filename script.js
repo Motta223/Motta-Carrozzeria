@@ -89,7 +89,10 @@ const DEPARTMENTS = {
 // 🔧 VARIABILI GLOBALI
 let currentUser = null;
 let works = [];
+let clients = [];
+let estimates = [];
 let timers = {};
+let currentCalendarDate = new Date();
 
 // 💾 DATI DI ESEMPIO
 const SAMPLE_WORKS = [
@@ -419,11 +422,13 @@ function getStatusText(status) {
 async function loadData() {
     try {
         console.log('📊 Caricando dati dal database...');
-        const response = await fetch('/api/works');
-        const result = await response.json();
 
-        if (result.success) {
-            works = result.data.map(work => ({
+        // Carica lavori
+        const worksResponse = await fetch('/api/works');
+        const worksResult = await worksResponse.json();
+
+        if (worksResult.success) {
+            works = worksResult.data.map(work => ({
                 id: work.id,
                 vehicle: work.vehicle,
                 client: work.client,
@@ -436,17 +441,45 @@ async function loadData() {
                 startedAt: work.started_at,
                 completedAt: work.completed_at,
                 estimatedHours: work.estimated_hours,
+                deliveryDate: work.delivery_date,
                 photos: work.photos || [],
                 spareParts: work.spare_parts || []
             }));
-            console.log('✅ Dati caricati dal database:', works.length, 'lavori');
+            console.log('✅ Lavori caricati:', works.length);
         } else {
-            console.error('❌ Errore caricamento dati:', result.error);
-            works = [...SAMPLE_WORKS]; // Fallback ai dati di esempio
+            console.error('❌ Errore caricamento lavori:', worksResult.error);
+            works = [...SAMPLE_WORKS];
         }
+
+        // Carica clienti
+        const clientsResponse = await fetch('/api/clients');
+        const clientsResult = await clientsResponse.json();
+
+        if (clientsResult.success) {
+            clients = clientsResult.data;
+            console.log('✅ Clienti caricati:', clients.length);
+        } else {
+            console.error('❌ Errore caricamento clienti:', clientsResult.error);
+            clients = [];
+        }
+
+        // Carica preventivi
+        const estimatesResponse = await fetch('/api/estimates');
+        const estimatesResult = await estimatesResponse.json();
+
+        if (estimatesResult.success) {
+            estimates = estimatesResult.data;
+            console.log('✅ Preventivi caricati:', estimates.length);
+        } else {
+            console.error('❌ Errore caricamento preventivi:', estimatesResult.error);
+            estimates = [];
+        }
+
     } catch (error) {
         console.error('❌ Errore connessione database:', error);
-        works = [...SAMPLE_WORKS]; // Fallback ai dati di esempio
+        works = [...SAMPLE_WORKS];
+        clients = [];
+        estimates = [];
     }
 }
 
@@ -1508,6 +1541,193 @@ function renderWorkList() {
             </div>
         </div>
     `).join('');
+}
+
+// 👥 GESTIONE CLIENTI
+function renderClients() {
+    const container = document.getElementById('clientsList');
+    if (!container) return;
+
+    if (clients.length === 0) {
+        container.innerHTML = '<div class="no-data"><i class="fas fa-users"></i><p>Nessun cliente presente</p></div>';
+        return;
+    }
+
+    container.innerHTML = clients.map(client => `
+        <div class="client-card" onclick="selectClient('${client.id}')">
+            <div class="client-header">
+                <h3>${client.name}</h3>
+                <span class="client-vehicles">${client.vehicles?.length || 0} veicoli</span>
+            </div>
+            <div class="client-details">
+                <div class="client-contact">
+                    <i class="fas fa-phone"></i> ${client.phone || 'N/A'}
+                </div>
+                <div class="client-contact">
+                    <i class="fas fa-envelope"></i> ${client.email || 'N/A'}
+                </div>
+            </div>
+            <div class="client-stats">
+                <span class="stat">
+                    <i class="fas fa-clipboard-list"></i>
+                    ${works.filter(w => w.client === client.name).length} lavori
+                </span>
+                <span class="stat">
+                    <i class="fas fa-calendar"></i>
+                    Cliente dal ${new Date(client.created_at).toLocaleDateString('it-IT')}
+                </span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function searchClients() {
+    const searchTerm = document.getElementById('clientSearch').value.toLowerCase();
+    const filteredClients = clients.filter(client =>
+        client.name.toLowerCase().includes(searchTerm) ||
+        client.phone?.includes(searchTerm) ||
+        client.email?.toLowerCase().includes(searchTerm)
+    );
+
+    const container = document.getElementById('clientsList');
+    if (!container) return;
+
+    container.innerHTML = filteredClients.map(client => `
+        <div class="client-card" onclick="selectClient('${client.id}')">
+            <div class="client-header">
+                <h3>${client.name}</h3>
+                <span class="client-vehicles">${client.vehicles?.length || 0} veicoli</span>
+            </div>
+            <div class="client-details">
+                <div class="client-contact">
+                    <i class="fas fa-phone"></i> ${client.phone || 'N/A'}
+                </div>
+                <div class="client-contact">
+                    <i class="fas fa-envelope"></i> ${client.email || 'N/A'}
+                </div>
+            </div>
+            <div class="client-stats">
+                <span class="stat">
+                    <i class="fas fa-clipboard-list"></i>
+                    ${works.filter(w => w.client === client.name).length} lavori
+                </span>
+                <span class="stat">
+                    <i class="fas fa-calendar"></i>
+                    Cliente dal ${new Date(client.created_at).toLocaleDateString('it-IT')}
+                </span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showNewClientModal() {
+    const modal = document.createElement('div');
+    modal.className = 'client-modal';
+    modal.innerHTML = `
+        <div class="modal-overlay" onclick="closeClientModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-plus"></i> Nuovo Cliente</h3>
+                <button class="modal-close" onclick="closeClientModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="newClientForm" class="client-form">
+                    <div class="form-group">
+                        <label for="clientName">Nome *</label>
+                        <input type="text" id="clientName" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="clientPhone">Telefono</label>
+                            <input type="tel" id="clientPhone">
+                        </div>
+                        <div class="form-group">
+                            <label for="clientEmail">Email</label>
+                            <input type="email" id="clientEmail">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="clientAddress">Indirizzo</label>
+                        <textarea id="clientAddress" rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="closeClientModal()">Annulla</button>
+                        <button type="submit" class="btn-primary">Crea Cliente</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('show'), 10);
+
+    // Setup form submission
+    document.getElementById('newClientForm').addEventListener('submit', handleNewClient);
+}
+
+async function handleNewClient(e) {
+    e.preventDefault();
+
+    const clientData = {
+        name: document.getElementById('clientName').value,
+        phone: document.getElementById('clientPhone').value,
+        email: document.getElementById('clientEmail').value,
+        address: document.getElementById('clientAddress').value
+    };
+
+    if (!clientData.name) {
+        showToast('Errore', 'Nome cliente obbligatorio', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/clients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(clientData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            clients.push(result.data);
+            renderClients();
+            populateClientDropdown();
+            closeClientModal();
+            showToast('Successo', 'Cliente creato con successo', 'success');
+        } else {
+            showToast('Errore', result.error, 'error');
+        }
+    } catch (error) {
+        showToast('Errore', 'Errore di connessione', 'error');
+    }
+}
+
+function closeClientModal() {
+    const modal = document.querySelector('.client-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+function selectClient(clientId) {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+
+    // Mostra dettagli cliente con storico lavori
+    showClientDetails(client);
+}
+
+function populateClientDropdown() {
+    const dropdown = document.getElementById('workClient');
+    if (!dropdown) return;
+
+    dropdown.innerHTML = '<option value="">Seleziona cliente</option>' +
+        clients.map(client => `<option value="${client.id}" data-name="${client.name}">${client.name}</option>`).join('');
 }
 
 console.log('🚗 Sistema Carrozzeria completamente caricato e funzionante!');
