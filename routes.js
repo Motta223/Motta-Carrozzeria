@@ -1,6 +1,7 @@
 // 🛣️ API ROUTES FOR CARROZZERIA MANAGEMENT SYSTEM
 const express = require('express');
 const { db } = require('./database-simple');
+const { COMPANY_INFO, EstimateCalculator, EstimatePDFGenerator } = require('./company-config');
 const router = express.Router();
 
 // 📋 WORKS ROUTES
@@ -472,23 +473,27 @@ router.post('/estimates', async (req, res) => {
             });
         }
 
-        const laborCost = (labor_hours || 0) * (labor_rate || 0);
+        // Usa la tariffa del reparto se disponibile
+        const departmentRate = COMPANY_INFO.departments[department]?.hourlyRate || COMPANY_INFO.rates.laborHourly;
+        const finalLaborRate = labor_rate || departmentRate;
+        const laborCost = (labor_hours || 0) * finalLaborRate;
         const totalCost = laborCost + (parts_cost || 0);
 
         const newEstimate = {
             id: 'E' + Date.now().toString().slice(-6),
+            estimate_number: EstimateCalculator.generateEstimateNumber(),
             client_id,
             vehicle,
             description,
             department,
             priority,
             labor_hours: labor_hours || 0,
-            labor_rate: labor_rate || 45.00,
+            labor_rate: finalLaborRate,
             labor_cost: laborCost,
             parts_cost: parts_cost || 0,
             total_cost: totalCost,
             status: 'pending',
-            valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 giorni
+            valid_until: EstimateCalculator.calculateExpiryDate(),
             notes: notes || ''
         };
 
@@ -530,6 +535,55 @@ router.post('/estimates/:id/convert', async (req, res) => {
             error: 'Errore nella conversione del preventivo'
         });
     }
+});
+
+// Generate PDF for estimate
+router.get('/estimates/:id/pdf', async (req, res) => {
+    try {
+        const estimate = await db.getEstimateById(req.params.id);
+        if (!estimate) {
+            return res.status(404).json({
+                success: false,
+                error: 'Preventivo non trovato'
+            });
+        }
+
+        const client = await db.getClientById(estimate.client_id);
+        if (!client) {
+            return res.status(404).json({
+                success: false,
+                error: 'Cliente non trovato'
+            });
+        }
+
+        const htmlContent = EstimatePDFGenerator.generateHTML(estimate, client);
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Content-Disposition', `inline; filename="Preventivo_${estimate.estimate_number || estimate.id}.html"`);
+        res.send(htmlContent);
+
+    } catch (error) {
+        console.error('Error generating estimate PDF:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Errore nella generazione del PDF'
+        });
+    }
+});
+
+// Get company information
+router.get('/company', (req, res) => {
+    res.json({
+        success: true,
+        data: {
+            name: COMPANY_INFO.name,
+            description: COMPANY_INFO.description,
+            address: COMPANY_INFO.address,
+            contacts: COMPANY_INFO.contacts,
+            departments: COMPANY_INFO.departments,
+            rates: COMPANY_INFO.rates
+        }
+    });
 });
 
 module.exports = router;

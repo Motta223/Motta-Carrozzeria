@@ -93,6 +93,7 @@ let clients = [];
 let estimates = [];
 let timers = {};
 let currentCalendarDate = new Date();
+let companyInfo = null;
 
 // 💾 DATI DI ESEMPIO
 const SAMPLE_WORKS = [
@@ -178,6 +179,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Setup forms
     setupForms();
+
+    // Popola dropdown clienti
+    populateClientDropdown();
 
     // Controlla se già loggato
     checkExistingLogin();
@@ -301,7 +305,16 @@ function loadDashboardData() {
     
     // Renderizza lista lavori
     renderWorkList();
-    
+
+    // Renderizza clienti
+    renderClients();
+
+    // Renderizza preventivi
+    renderEstimates();
+
+    // Popola dropdown clienti
+    populateClientDropdown();
+
     console.log('✅ Dati dashboard caricati');
 }
 
@@ -473,6 +486,17 @@ async function loadData() {
         } else {
             console.error('❌ Errore caricamento preventivi:', estimatesResult.error);
             estimates = [];
+        }
+
+        // Carica dati aziendali
+        const companyResponse = await fetch('/api/company');
+        const companyResult = await companyResponse.json();
+
+        if (companyResult.success) {
+            companyInfo = companyResult.data;
+            console.log('✅ Dati aziendali caricati');
+        } else {
+            console.error('❌ Errore caricamento dati aziendali:', companyResult.error);
         }
 
     } catch (error) {
@@ -1728,6 +1752,298 @@ function populateClientDropdown() {
 
     dropdown.innerHTML = '<option value="">Seleziona cliente</option>' +
         clients.map(client => `<option value="${client.id}" data-name="${client.name}">${client.name}</option>`).join('');
+}
+
+// 💰 GESTIONE PREVENTIVI
+function renderEstimates() {
+    const container = document.getElementById('estimatesList');
+    if (!container) return;
+
+    if (estimates.length === 0) {
+        container.innerHTML = '<div class="no-data"><i class="fas fa-file-invoice-dollar"></i><p>Nessun preventivo presente</p></div>';
+        return;
+    }
+
+    container.innerHTML = estimates.map(estimate => `
+        <div class="estimate-card ${estimate.status}" onclick="selectEstimate('${estimate.id}')">
+            <div class="estimate-header">
+                <h3>Preventivo ${estimate.estimate_number || estimate.id}</h3>
+                <span class="estimate-status ${estimate.status}">${getEstimateStatusText(estimate.status)}</span>
+            </div>
+            <div class="estimate-details">
+                <div class="estimate-client">
+                    <i class="fas fa-user"></i> ${estimate.client_name}
+                </div>
+                <div class="estimate-vehicle">
+                    <i class="fas fa-car"></i> ${estimate.vehicle}
+                </div>
+                <div class="estimate-department">
+                    <i class="fas fa-industry"></i> ${companyInfo?.departments[estimate.department]?.name || estimate.department}
+                </div>
+            </div>
+            <div class="estimate-costs">
+                <div class="cost-breakdown">
+                    <span>Manodopera: €${estimate.labor_cost.toFixed(2)}</span>
+                    <span>Ricambi: €${estimate.parts_cost.toFixed(2)}</span>
+                </div>
+                <div class="total-cost">
+                    <strong>Totale: €${estimate.total_cost.toFixed(2)}</strong>
+                </div>
+            </div>
+            <div class="estimate-actions">
+                <button class="btn-pdf" onclick="event.stopPropagation(); generateEstimatePDF('${estimate.id}')">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </button>
+                ${estimate.status === 'pending' ? `
+                    <button class="btn-convert" onclick="event.stopPropagation(); convertEstimateToWork('${estimate.id}')">
+                        <i class="fas fa-arrow-right"></i> Converti
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function getEstimateStatusText(status) {
+    const statusMap = {
+        'pending': 'In Attesa',
+        'approved': 'Approvato',
+        'rejected': 'Rifiutato',
+        'converted': 'Convertito',
+        'expired': 'Scaduto'
+    };
+    return statusMap[status] || status;
+}
+
+function showNewEstimateModal() {
+    const modal = document.createElement('div');
+    modal.className = 'estimate-modal';
+    modal.innerHTML = `
+        <div class="modal-overlay" onclick="closeEstimateModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-invoice-dollar"></i> Nuovo Preventivo</h3>
+                <button class="modal-close" onclick="closeEstimateModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="newEstimateForm" class="estimate-form">
+                    <div class="form-group">
+                        <label for="estimateClient">Cliente *</label>
+                        <select id="estimateClient" required>
+                            <option value="">Seleziona cliente</option>
+                            ${clients.map(client => `<option value="${client.id}">${client.name}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estimateVehicle">Veicolo *</label>
+                        <input type="text" id="estimateVehicle" placeholder="es. Fiat Punto AB123CD" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estimateDescription">Descrizione Lavori *</label>
+                        <textarea id="estimateDescription" rows="3" placeholder="Descrivi i lavori da effettuare..." required></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="estimateDepartment">Reparto *</label>
+                            <select id="estimateDepartment" required onchange="updateLaborRate()">
+                                <option value="">Seleziona reparto</option>
+                                <option value="verniciatura">Verniciatura</option>
+                                <option value="lattoneria">Lattoneria</option>
+                                <option value="meccanica">Meccanica</option>
+                                <option value="preparazione">Preparazione</option>
+                                <option value="lavaggio">Lavaggio</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="estimatePriority">Priorità *</label>
+                            <select id="estimatePriority" required>
+                                <option value="">Seleziona priorità</option>
+                                <option value="low">Bassa</option>
+                                <option value="medium">Media</option>
+                                <option value="high">Alta</option>
+                                <option value="urgent">Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="estimateLaborHours">Ore Manodopera</label>
+                            <input type="number" id="estimateLaborHours" step="0.5" min="0" onchange="calculateEstimateTotal()">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="estimateLaborRate">Tariffa Oraria (€)</label>
+                            <input type="number" id="estimateLaborRate" step="0.01" min="0" onchange="calculateEstimateTotal()">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estimatePartsCost">Costo Ricambi (€)</label>
+                        <input type="number" id="estimatePartsCost" step="0.01" min="0" onchange="calculateEstimateTotal()">
+                    </div>
+
+                    <div class="estimate-total">
+                        <div class="total-breakdown">
+                            <div class="total-line">
+                                <span>Manodopera:</span>
+                                <span id="laborCostDisplay">€ 0.00</span>
+                            </div>
+                            <div class="total-line">
+                                <span>Ricambi:</span>
+                                <span id="partsCostDisplay">€ 0.00</span>
+                            </div>
+                            <div class="total-line subtotal">
+                                <span>Subtotale (IVA esclusa):</span>
+                                <span id="subtotalDisplay">€ 0.00</span>
+                            </div>
+                            <div class="total-line vat">
+                                <span>IVA 22%:</span>
+                                <span id="vatDisplay">€ 0.00</span>
+                            </div>
+                            <div class="total-line final">
+                                <strong>Totale (IVA inclusa):</strong>
+                                <strong id="totalDisplay">€ 0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estimateNotes">Note</label>
+                        <textarea id="estimateNotes" rows="2" placeholder="Note aggiuntive..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="closeEstimateModal()">Annulla</button>
+                        <button type="submit" class="btn-primary">Crea Preventivo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('show'), 10);
+
+    // Setup form submission
+    document.getElementById('newEstimateForm').addEventListener('submit', handleNewEstimate);
+}
+
+function updateLaborRate() {
+    const department = document.getElementById('estimateDepartment').value;
+    const laborRateInput = document.getElementById('estimateLaborRate');
+
+    if (department && companyInfo?.departments[department]) {
+        laborRateInput.value = companyInfo.departments[department].hourlyRate;
+        calculateEstimateTotal();
+    }
+}
+
+function calculateEstimateTotal() {
+    const hours = parseFloat(document.getElementById('estimateLaborHours').value) || 0;
+    const rate = parseFloat(document.getElementById('estimateLaborRate').value) || 0;
+    const partsCost = parseFloat(document.getElementById('estimatePartsCost').value) || 0;
+
+    const laborCost = hours * rate;
+    const subtotal = laborCost + partsCost;
+    const vat = subtotal * 0.22;
+    const total = subtotal + vat;
+
+    document.getElementById('laborCostDisplay').textContent = `€ ${laborCost.toFixed(2)}`;
+    document.getElementById('partsCostDisplay').textContent = `€ ${partsCost.toFixed(2)}`;
+    document.getElementById('subtotalDisplay').textContent = `€ ${subtotal.toFixed(2)}`;
+    document.getElementById('vatDisplay').textContent = `€ ${vat.toFixed(2)}`;
+    document.getElementById('totalDisplay').textContent = `€ ${total.toFixed(2)}`;
+}
+
+async function handleNewEstimate(e) {
+    e.preventDefault();
+
+    const estimateData = {
+        client_id: document.getElementById('estimateClient').value,
+        vehicle: document.getElementById('estimateVehicle').value,
+        description: document.getElementById('estimateDescription').value,
+        department: document.getElementById('estimateDepartment').value,
+        priority: document.getElementById('estimatePriority').value,
+        labor_hours: parseFloat(document.getElementById('estimateLaborHours').value) || 0,
+        labor_rate: parseFloat(document.getElementById('estimateLaborRate').value) || 0,
+        parts_cost: parseFloat(document.getElementById('estimatePartsCost').value) || 0,
+        notes: document.getElementById('estimateNotes').value
+    };
+
+    if (!estimateData.client_id || !estimateData.vehicle || !estimateData.description || !estimateData.department || !estimateData.priority) {
+        showToast('Errore', 'Compila tutti i campi obbligatori', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/estimates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(estimateData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            estimates.push(result.data);
+            renderEstimates();
+            closeEstimateModal();
+            showToast('Successo', 'Preventivo creato con successo', 'success');
+        } else {
+            showToast('Errore', result.error, 'error');
+        }
+    } catch (error) {
+        showToast('Errore', 'Errore di connessione', 'error');
+    }
+}
+
+function closeEstimateModal() {
+    const modal = document.querySelector('.estimate-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+async function generateEstimatePDF(estimateId) {
+    try {
+        const url = `/api/estimates/${estimateId}/pdf`;
+        window.open(url, '_blank');
+        showToast('PDF', 'Preventivo aperto in nuova finestra', 'info');
+    } catch (error) {
+        showToast('Errore', 'Errore nella generazione del PDF', 'error');
+    }
+}
+
+async function convertEstimateToWork(estimateId) {
+    if (!confirm('Convertire questo preventivo in un lavoro?')) return;
+
+    try {
+        const response = await fetch(`/api/estimates/${estimateId}/convert`, {
+            method: 'POST'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Ricarica i dati
+            await loadData();
+            renderEstimates();
+            loadDashboardData();
+            showToast('Convertito', 'Preventivo convertito in lavoro con successo', 'success');
+        } else {
+            showToast('Errore', result.error, 'error');
+        }
+    } catch (error) {
+        showToast('Errore', 'Errore nella conversione', 'error');
+    }
 }
 
 console.log('🚗 Sistema Carrozzeria completamente caricato e funzionante!');
