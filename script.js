@@ -161,24 +161,24 @@ const SAMPLE_WORKS = [
 ];
 
 // 🚀 INIZIALIZZAZIONE
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Inizializzazione Sistema Carrozzeria...');
-    
-    // Carica dati
-    loadData();
-    
+
+    // Carica dati dal database
+    await loadData();
+
     // Setup login
     setupLogin();
-    
+
     // Setup navigation
     setupNavigation();
-    
+
     // Setup forms
     setupForms();
-    
+
     // Controlla se già loggato
     checkExistingLogin();
-    
+
     console.log('✅ Sistema inizializzato correttamente');
 });
 
@@ -415,27 +415,45 @@ function getStatusText(status) {
     return statuses[status] || status;
 }
 
-// 💾 CARICA DATI
-function loadData() {
-    const savedWorks = localStorage.getItem('carrozzeria_works');
-    if (savedWorks) {
-        try {
-            works = JSON.parse(savedWorks);
-        } catch (e) {
-            console.log('Errore nel caricamento lavori, uso dati di esempio');
-            works = [...SAMPLE_WORKS];
+// 💾 CARICA DATI DAL DATABASE
+async function loadData() {
+    try {
+        console.log('📊 Caricando dati dal database...');
+        const response = await fetch('/api/works');
+        const result = await response.json();
+
+        if (result.success) {
+            works = result.data.map(work => ({
+                id: work.id,
+                vehicle: work.vehicle,
+                client: work.client,
+                description: work.description,
+                department: work.department,
+                priority: work.priority,
+                status: work.status,
+                assignedTo: work.assigned_to,
+                createdAt: work.created_at,
+                startedAt: work.started_at,
+                completedAt: work.completed_at,
+                estimatedHours: work.estimated_hours,
+                photos: work.photos || [],
+                spareParts: work.spare_parts || []
+            }));
+            console.log('✅ Dati caricati dal database:', works.length, 'lavori');
+        } else {
+            console.error('❌ Errore caricamento dati:', result.error);
+            works = [...SAMPLE_WORKS]; // Fallback ai dati di esempio
         }
-    } else {
-        works = [...SAMPLE_WORKS];
+    } catch (error) {
+        console.error('❌ Errore connessione database:', error);
+        works = [...SAMPLE_WORKS]; // Fallback ai dati di esempio
     }
-    
-    console.log('📊 Dati caricati:', works.length, 'lavori');
 }
 
-// 💾 SALVA DATI
-function saveData() {
-    localStorage.setItem('carrozzeria_works', JSON.stringify(works));
-    console.log('💾 Dati salvati');
+// 💾 SALVA DATI NEL DATABASE
+async function saveData() {
+    // Non più necessario - i dati vengono salvati automaticamente tramite API
+    console.log('💾 Dati sincronizzati con database');
 }
 
 // 🚪 LOGOUT
@@ -498,23 +516,15 @@ function setupForms() {
 }
 
 // ➕ GESTIONE NUOVO LAVORO
-function handleNewWork(e) {
+async function handleNewWork(e) {
     e.preventDefault();
 
-    const formData = new FormData(e.target);
     const newWork = {
-        id: 'W' + Date.now().toString().slice(-6),
         vehicle: document.getElementById('workVehicle').value,
         client: document.getElementById('workClient').value,
         description: document.getElementById('workDescription').value,
         department: document.getElementById('workDepartment').value,
-        priority: document.getElementById('workPriority').value,
-        status: 'pending',
-        assignedTo: null,
-        createdAt: new Date(),
-        estimatedHours: 0,
-        photos: [],
-        spareParts: []
+        priority: document.getElementById('workPriority').value
     };
 
     // Validazione
@@ -523,21 +533,40 @@ function handleNewWork(e) {
         return;
     }
 
-    // Aggiungi lavoro
-    works.unshift(newWork);
-    saveData();
+    try {
+        // Crea lavoro tramite API
+        const response = await fetch('/api/works', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newWork)
+        });
 
-    // Aggiorna UI
-    loadDashboardData();
+        const result = await response.json();
 
-    // Reset form
-    e.target.reset();
+        if (result.success) {
+            // Ricarica i dati dal database
+            await loadData();
 
-    // Torna alla dashboard
-    switchTab('dashboard-tab');
+            // Aggiorna UI
+            loadDashboardData();
 
-    showToast('Successo', `Lavoro ${newWork.id} creato con successo`, 'success');
-    console.log('✅ Nuovo lavoro creato:', newWork.id);
+            // Reset form
+            e.target.reset();
+
+            // Torna alla dashboard
+            switchTab('dashboard-tab');
+
+            showToast('Successo', `Lavoro ${result.data.id} creato con successo`, 'success');
+            console.log('✅ Nuovo lavoro creato:', result.data.id);
+        } else {
+            showToast('Errore', result.error || 'Errore nella creazione del lavoro', 'error');
+        }
+    } catch (error) {
+        console.error('❌ Errore creazione lavoro:', error);
+        showToast('Errore', 'Errore di connessione al server', 'error');
+    }
 }
 
 // 🎯 SELEZIONE LAVORO

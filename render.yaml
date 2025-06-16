@@ -21,3 +21,9 @@ services:
       - path: /static/*
         name: Cache-Control
         value: public, max-age=86400
+
+databases:
+  - name: carrozzeria-db
+    databaseName: carrozzeria_motta
+    user: carrozzeria_user
+    plan: free

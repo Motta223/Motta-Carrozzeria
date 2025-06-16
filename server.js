@@ -3,6 +3,9 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const { initializeDatabase } = require('./database');
+const apiRoutes = require('./routes');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +29,13 @@ app.use(compression());
 
 // 🌐 CORS middleware
 app.use(cors());
+
+// 📝 JSON middleware
+app.use(express.json({ limit: '50mb' })); // Large limit for photo uploads
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// 🛣️ API routes
+app.use('/api', apiRoutes);
 
 // 📁 Static files middleware
 app.use(express.static(path.join(__dirname), {
@@ -89,20 +99,33 @@ app.use((err, req, res, next) => {
     });
 });
 
-// 🚀 Start server
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`
+// 🚀 Start server with database initialization
+async function startServer() {
+    try {
+        // Initialize database
+        await initializeDatabase();
+
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`
 🚗 ========================================
    CARROZZERIA MOTTA ROBERTO
    Sistema Gestionale Avviato
 ========================================
 🌐 Server: http://localhost:${PORT}
+🗄️ Database: PostgreSQL ${process.env.DATABASE_URL ? 'Connected' : 'Local'}
 🔧 Environment: ${process.env.NODE_ENV || 'development'}
 📦 Version: ${require('./package.json').version}
 ⏰ Started: ${new Date().toLocaleString('it-IT')}
 ========================================
-    `);
-});
+            `);
+        });
+    } catch (error) {
+        console.error('❌ Errore avvio server:', error);
+        process.exit(1);
+    }
+}
+
+startServer();
 
 // 🛑 Graceful shutdown
 process.on('SIGTERM', () => {
