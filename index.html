@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚗 Carrozzeria Motta Roberto - Sistema Gestionale</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 🔐 LOGIN SCREEN -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <div class="login-header">
+                <h1><i class="fas fa-car"></i> Carrozzeria Motta Roberto</h1>
+                <p>Sistema di Gestione Lavori e Operatori</p>
+            </div>
+            
+            <form id="loginForm" class="login-form">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username" placeholder="Username" required>
+                </div>
+                
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" placeholder="Password" required>
+                </div>
+                
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    ACCEDI
+                </button>
+            </form>
+            
+            <!-- Quick Login Buttons -->
+            <div class="quick-login">
+                <h4>🚀 Accesso Rapido</h4>
+                <div class="quick-buttons">
+                    <button class="quick-btn manager" onclick="quickLogin('admin', 'admin')">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Manager</span>
+                    </button>
+                    <button class="quick-btn employee" onclick="quickLogin('rocco', 'rocco')">
+                        <i class="fas fa-hammer"></i>
+                        <span>Rocco</span>
+                    </button>
+                    <button class="quick-btn employee" onclick="quickLogin('andrea', 'andrea')">
+                        <i class="fas fa-spray-can"></i>
+                        <span>Andrea</span>
+                    </button>
+                    <button class="quick-btn employee" onclick="quickLogin('luca', 'luca')">
+                        <i class="fas fa-cog"></i>
+                        <span>Luca</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Credentials Info -->
+            <div class="credentials-info">
+                <details>
+                    <summary><i class="fas fa-info-circle"></i> Tutte le Credenziali</summary>
+                    <div class="credentials-list">
+                        <div class="cred-section">
+                            <h5>👨‍💼 Manager</h5>
+                            <p><code>admin/admin</code> - <code>manager/manager</code></p>
+                        </div>
+                        <div class="cred-section">
+                            <h5>👨‍🔧 Dipendenti</h5>
+                            <p><code>rocco/rocco</code> - <code>andrea/andrea</code> - <code>luca/luca</code></p>
+                            <p><code>francesco/francesco</code> - <code>extra/extra</code></p>
+                        </div>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🎯 DASHBOARD -->
+    <div id="dashboard" class="dashboard">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-car"></i> Carrozzeria Manager</h1>
+            </div>
+            <div class="header-right">
+                <span class="user-info">
+                    <i class="fas fa-user"></i>
+                    <span id="currentUser">Utente</span>
+                    (<span id="currentRole">Ruolo</span>)
+                </span>
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="dashboard-tab">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </button>
+            <button class="nav-tab" data-tab="new-work-tab" id="newWorkTab">
+                <i class="fas fa-plus"></i> Nuovo Lavoro
+            </button>
+            <button class="nav-tab" data-tab="reports-tab" id="reportsTab" style="display: none;">
+                <i class="fas fa-chart-bar"></i> Report
+            </button>
+        </nav>
+
+        <!-- Dashboard Tab Content -->
+        <div id="dashboard-tab" class="tab-content active">
+            <!-- Quick Stats -->
+            <div class="quick-stats">
+                <div class="stat-card urgent">
+                    <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="urgentCount">0</div>
+                        <div class="stat-label">Lavori Urgenti</div>
+                    </div>
+                </div>
+                <div class="stat-card active">
+                    <div class="stat-icon"><i class="fas fa-cogs"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="activeCount">0</div>
+                        <div class="stat-label">In Lavorazione</div>
+                    </div>
+                </div>
+                <div class="stat-card completed">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="completedCount">0</div>
+                        <div class="stat-label">Completati</div>
+                    </div>
+                </div>
+                <div class="stat-card operators">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-content">
+                        <div class="stat-number" id="operatorsCount">0</div>
+                        <div class="stat-label">Operatori Attivi</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Reparti -->
+            <div class="departments-dashboard">
+                <div class="section-header">
+                    <h2><i class="fas fa-industry"></i> Dashboard Reparti</h2>
+                    <div class="dashboard-controls">
+                        <button class="control-btn" onclick="refreshDashboard()">
+                            <i class="fas fa-sync-alt"></i> Aggiorna
+                        </button>
+                    </div>
+                </div>
+                <div id="departmentsContainer" class="departments-container">
+                    <!-- Verniciatura Department -->
+                    <div class="department-card verniciatura">
+                        <div class="department-header">
+                            <h3><i class="fas fa-spray-can"></i> Verniciatura</h3>
+                            <div class="department-status active">Attivo</div>
+                        </div>
+                        <div class="department-operators">
+                            <div class="operator-card" data-operator="andrea">
+                                <div class="operator-info">
+                                    <div class="operator-name">Andrea Misrotti</div>
+                                    <div class="operator-status available">Disponibile</div>
+                                </div>
+                                <div class="operator-timer">
+                                    <span class="timer-display">00:00:00</span>
+                                    <button class="timer-btn start" onclick="startTimer('andrea')">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="department-works" id="verniciatura-works">
+                            <!-- Works will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Lattoneria Department -->
+                    <div class="department-card lattoneria">
+                        <div class="department-header">
+                            <h3><i class="fas fa-hammer"></i> Lattoneria</h3>
+                            <div class="department-status active">Attivo</div>
+                        </div>
+                        <div class="department-operators">
+                            <div class="operator-card" data-operator="rocco">
+                                <div class="operator-info">
+                                    <div class="operator-name">Rocco Vivona</div>
+                                    <div class="operator-status available">Disponibile</div>
+                                </div>
+                                <div class="operator-timer">
+                                    <span class="timer-display">00:00:00</span>
+                                    <button class="timer-btn start" onclick="startTimer('rocco')">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="department-works" id="lattoneria-works">
+                            <!-- Works will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Meccanica Department -->
+                    <div class="department-card meccanica">
+                        <div class="department-header">
+                            <h3><i class="fas fa-cog"></i> Meccanica</h3>
+                            <div class="department-status active">Attivo</div>
+                        </div>
+                        <div class="department-operators">
+                            <div class="operator-card" data-operator="luca">
+                                <div class="operator-info">
+                                    <div class="operator-name">Luca Pellica</div>
+                                    <div class="operator-status available">Disponibile</div>
+                                </div>
+                                <div class="operator-timer">
+                                    <span class="timer-display">00:00:00</span>
+                                    <button class="timer-btn start" onclick="startTimer('luca')">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="department-works" id="meccanica-works">
+                            <!-- Works will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Preparazione Department -->
+                    <div class="department-card preparazione">
+                        <div class="department-header">
+                            <h3><i class="fas fa-brush"></i> Preparazione</h3>
+                            <div class="department-status active">Attivo</div>
+                        </div>
+                        <div class="department-operators">
+                            <div class="operator-card" data-operator="francesco">
+                                <div class="operator-info">
+                                    <div class="operator-name">Francesco</div>
+                                    <div class="operator-status available">Disponibile</div>
+                                </div>
+                                <div class="operator-timer">
+                                    <span class="timer-display">00:00:00</span>
+                                    <button class="timer-btn start" onclick="startTimer('francesco')">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="department-works" id="preparazione-works">
+                            <!-- Works will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Lavaggio Department -->
+                    <div class="department-card lavaggio">
+                        <div class="department-header">
+                            <h3><i class="fas fa-tint"></i> Lavaggio</h3>
+                            <div class="department-status active">Attivo</div>
+                        </div>
+                        <div class="department-operators">
+                            <div class="operator-card" data-operator="extra">
+                                <div class="operator-info">
+                                    <div class="operator-name">Extra Operatori</div>
+                                    <div class="operator-status available">Disponibile</div>
+                                </div>
+                                <div class="operator-timer">
+                                    <span class="timer-display">00:00:00</span>
+                                    <button class="timer-btn start" onclick="startTimer('extra')">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="department-works" id="lavaggio-works">
+                            <!-- Works will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Work List -->
+            <div class="work-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-list"></i> Lista Lavori</h2>
+                    <div class="work-controls">
+                        <select id="workFilter">
+                            <option value="all">Tutti i Lavori</option>
+                            <option value="pending">In Attesa</option>
+                            <option value="in_progress">In Corso</option>
+                            <option value="completed">Completati</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="workList" class="work-list">
+                    <!-- Work items will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- New Work Tab Content -->
+        <div id="new-work-tab" class="tab-content">
+            <div class="form-container">
+                <h2><i class="fas fa-plus"></i> Nuovo Lavoro</h2>
+                <form id="newWorkForm" class="work-form">
+                    <div class="form-group">
+                        <label for="workVehicle">Veicolo *</label>
+                        <input type="text" id="workVehicle" placeholder="es. Fiat Punto AB123CD" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="workClient">Cliente *</label>
+                        <input type="text" id="workClient" placeholder="es. Mario Rossi" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="workDescription">Descrizione Lavoro *</label>
+                        <textarea id="workDescription" placeholder="Descrivi il lavoro da eseguire..." required></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="workDepartment">Reparto *</label>
+                            <select id="workDepartment" required>
+                                <option value="">Seleziona reparto</option>
+                                <option value="verniciatura">Verniciatura</option>
+                                <option value="lattoneria">Lattoneria</option>
+                                <option value="meccanica">Meccanica</option>
+                                <option value="preparazione">Preparazione</option>
+                                <option value="lavaggio">Lavaggio</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="workPriority">Priorità *</label>
+                            <select id="workPriority" required>
+                                <option value="">Seleziona priorità</option>
+                                <option value="low">Bassa</option>
+                                <option value="medium">Media</option>
+                                <option value="high">Alta</option>
+                                <option value="urgent">Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-plus"></i> Crea Lavoro
+                        </button>
+                        <button type="reset" class="btn-secondary">
+                            <i class="fas fa-times"></i> Annulla
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Reports Tab Content -->
+        <div id="reports-tab" class="tab-content">
+            <div class="reports-container">
+                <h2><i class="fas fa-chart-bar"></i> Report e Statistiche</h2>
+                <div class="reports-grid">
+                    <div class="report-card">
+                        <h3>📊 Statistiche Generali</h3>
+                        <div id="generalStats">
+                            <!-- Stats will be populated here -->
+                        </div>
+                    </div>
+                    <div class="report-card">
+                        <h3>⏱️ Performance Reparti</h3>
+                        <div id="departmentStats">
+                            <!-- Department stats will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+# 📦 Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 🔧 Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# 📊 Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# 🔍 nyc test coverage
+.nyc_output
+
+# 🏗️ Grunt intermediate storage
+.grunt
+
+# 📁 Bower dependency directory
+bower_components
+
+# 🔒 node-waf configuration
+.lock-wscript
+
+# 📦 Compiled binary addons
+build/Release
+
+# 🗂️ Dependency directories
+jspm_packages/
+
+# 📝 TypeScript cache
+*.tsbuildinfo
+
+# 🎯 Optional npm cache directory
+.npm
+
+# 🔧 Optional eslint cache
+.eslintcache
+
+# 📊 Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# 🎯 Optional REPL history
+.node_repl_history
+
+# 📦 Output of 'npm pack'
+*.tgz
+
+# 🔧 Yarn Integrity file
+.yarn-integrity
+
+# 🌐 dotenv environment variables file
+.env
+.env.test
+.env.production
+.env.local
+
+# 📊 parcel-bundler cache
+.cache
+.parcel-cache
+
+# 🔧 Next.js build output
+.next
+
+# 🎯 Nuxt.js build / generate output
+.nuxt
+dist
+
+# 🔧 Gatsby files
+.cache/
+public
+
+# 📊 Storybook build outputs
+.out
+.storybook-out
+
+# 🔧 Temporary folders
+tmp/
+temp/
+
+# 🗂️ Logs
+logs
+*.log
+
+# 🔒 Runtime data
+pids
+*.pid
+*.seed
+
+# 🎯 OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 🔧 IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 🎯 Local development
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

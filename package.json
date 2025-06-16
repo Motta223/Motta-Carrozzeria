@@ -1,0 +1,35 @@
+{
+  "name": "carrozzeria-motta-roberto",
+  "version": "1.0.0",
+  "description": "Sistema di Gestione Lavori e Operatori per Carrozzeria Motta Roberto",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "echo 'No build step required for static site'",
+    "test": "echo 'No tests specified'"
+  },
+  "keywords": [
+    "carrozzeria",
+    "gestionale",
+    "automotive",
+    "workshop",
+    "management"
+  ],
+  "author": "Carrozzeria Motta Roberto",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "compression": "^1.7.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/carrozzeria-motta-roberto.git"
+  },
+  "homepage": "https://carrozzeria-motta-roberto.onrender.com"
+}
