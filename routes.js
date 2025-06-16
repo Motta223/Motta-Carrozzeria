@@ -1,6 +1,6 @@
 // 🛣️ API ROUTES FOR CARROZZERIA MANAGEMENT SYSTEM
 const express = require('express');
-const { db } = require('./database');
+const { db } = require('./database-simple');
 const router = express.Router();
 
 // 📋 WORKS ROUTES

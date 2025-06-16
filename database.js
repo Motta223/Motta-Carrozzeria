@@ -3,32 +3,54 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 // 🔧 Database connection configuration
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+let pool = null;
+let useDatabase = false;
+
+// Check if database URL is available
+if (process.env.DATABASE_URL) {
+    try {
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        });
+        useDatabase = true;
+        console.log('🗄️ Database PostgreSQL configurato');
+    } catch (error) {
+        console.log('⚠️ Errore configurazione database, uso localStorage');
+        useDatabase = false;
+    }
+} else {
+    console.log('📝 DATABASE_URL non trovato, uso localStorage come fallback');
+    useDatabase = false;
+}
 
 // 🏗️ Database initialization and table creation
 async function initializeDatabase() {
-    const client = await pool.connect();
-    
+    if (!useDatabase || !pool) {
+        console.log('📝 Usando localStorage come storage (database non disponibile)');
+        return;
+    }
+
     try {
-        console.log('🗄️ Inizializzando database...');
-        
-        // 👥 Users table (for future expansion)
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                username VARCHAR(50) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                role VARCHAR(20) NOT NULL,
-                name VARCHAR(100) NOT NULL,
-                operator_id VARCHAR(50),
-                department VARCHAR(50),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+        const client = await pool.connect();
+
+        try {
+            console.log('🗄️ Inizializzando database PostgreSQL...');
+
+            // 👥 Users table (for future expansion)
+            await client.query(`
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username VARCHAR(50) UNIQUE NOT NULL,
+                    password VARCHAR(255) NOT NULL,
+                    role VARCHAR(20) NOT NULL,
+                    name VARCHAR(100) NOT NULL,
+                    operator_id VARCHAR(50),
+                    department VARCHAR(50),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
 
         // 📋 Works table
         await client.query(`
@@ -95,13 +117,20 @@ async function initializeDatabase() {
             await insertSampleData(client);
         }
 
-        console.log('✅ Database inizializzato con successo');
-        
-    } catch (error) {
-        console.error('❌ Errore inizializzazione database:', error);
-        throw error;
-    } finally {
-        client.release();
+            console.log('✅ Database PostgreSQL inizializzato con successo');
+
+        } catch (error) {
+            console.error('❌ Errore inizializzazione database PostgreSQL:', error);
+            console.log('📝 Fallback a localStorage attivato');
+            useDatabase = false;
+        } finally {
+            client.release();
+        }
+
+    } catch (connectionError) {
+        console.error('❌ Errore connessione database:', connectionError.message);
+        console.log('📝 Usando localStorage come fallback');
+        useDatabase = false;
     }
 }
 
@@ -173,21 +202,61 @@ async function insertSampleData(client) {
     `, ['SP001', 'W002', 'Vernice Metallizzata Blu', 'VER-BLU-001', 2, 45.50, 91.00]);
 }
 
-// 🔍 Database query functions
+// 📝 localStorage fallback data
+let localStorageData = {
+    works: [],
+    photos: [],
+    spareParts: [],
+    timerSessions: []
+};
+
+// Load from localStorage if available
+function loadLocalStorageData() {
+    try {
+        const saved = localStorage.getItem('carrozzeria_data');
+        if (saved) {
+            localStorageData = JSON.parse(saved);
+        }
+    } catch (error) {
+        console.log('📝 Inizializzando localStorage vuoto');
+    }
+}
+
+// Save to localStorage
+function saveLocalStorageData() {
+    try {
+        localStorage.setItem('carrozzeria_data', JSON.stringify(localStorageData));
+    } catch (error) {
+        console.error('❌ Errore salvataggio localStorage:', error);
+    }
+}
+
+// 🔍 Database query functions with localStorage fallback
 const db = {
     // Works
     async getAllWorks() {
-        const result = await pool.query(`
-            SELECT w.*, 
-                   COALESCE(json_agg(DISTINCT jsonb_build_object('id', p.id, 'name', p.name, 'data', p.data, 'size', p.size, 'uploadedAt', p.uploaded_at)) FILTER (WHERE p.id IS NOT NULL), '[]') as photos,
-                   COALESCE(json_agg(DISTINCT jsonb_build_object('id', sp.id, 'name', sp.name, 'code', sp.code, 'quantity', sp.quantity, 'unitPrice', sp.unit_price, 'totalPrice', sp.total_price, 'addedAt', sp.added_at)) FILTER (WHERE sp.id IS NOT NULL), '[]') as spare_parts
-            FROM works w
-            LEFT JOIN work_photos p ON w.id = p.work_id
-            LEFT JOIN work_spare_parts sp ON w.id = sp.work_id
-            GROUP BY w.id
-            ORDER BY w.created_at DESC
-        `);
-        return result.rows;
+        if (!useDatabase || !pool) {
+            // localStorage fallback
+            return localStorageData.works || [];
+        }
+
+        try {
+            const result = await pool.query(`
+                SELECT w.*,
+                       COALESCE(json_agg(DISTINCT jsonb_build_object('id', p.id, 'name', p.name, 'data', p.data, 'size', p.size, 'uploadedAt', p.uploaded_at)) FILTER (WHERE p.id IS NOT NULL), '[]') as photos,
+                       COALESCE(json_agg(DISTINCT jsonb_build_object('id', sp.id, 'name', sp.name, 'code', sp.code, 'quantity', sp.quantity, 'unitPrice', sp.unit_price, 'totalPrice', sp.total_price, 'addedAt', sp.added_at)) FILTER (WHERE sp.id IS NOT NULL), '[]') as spare_parts
+                FROM works w
+                LEFT JOIN work_photos p ON w.id = p.work_id
+                LEFT JOIN work_spare_parts sp ON w.id = sp.work_id
+                GROUP BY w.id
+                ORDER BY w.created_at DESC
+            `);
+            return result.rows;
+        } catch (error) {
+            console.error('❌ Errore database, uso localStorage:', error);
+            useDatabase = false;
+            return localStorageData.works || [];
+        }
     },
 
     async getWorkById(id) {

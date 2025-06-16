@@ -3,7 +3,7 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-const { initializeDatabase } = require('./database');
+const { initializeDatabase } = require('./database-simple');
 const apiRoutes = require('./routes');
 require('dotenv').config();
 
