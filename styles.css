@@ -259,7 +259,7 @@ body {
 
 /* Header */
 .header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     color: white;
     padding: 20px 30px;
     display: flex;
@@ -268,9 +268,25 @@ body {
     box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
 }
 
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.company-logo {
+    height: 45px;
+    width: auto;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    background: white;
+    padding: 4px;
+}
+
 .header-left h1 {
     font-size: 24px;
     font-weight: 700;
+    margin: 0;
 }
 
 .header-right {
@@ -2074,4 +2090,497 @@ body {
     .modal-tab.active {
         border-bottom-color: #667eea;
     }
+}
+
+/* 👥 CLIENTS STYLES */
+.clients-container {
+    padding: 20px;
+}
+
+.clients-search {
+    margin-bottom: 20px;
+}
+
+.clients-search input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.clients-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+}
+
+.client-card {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.client-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    border-color: #3498db;
+}
+
+.client-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.client-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 18px;
+}
+
+.client-vehicles {
+    background: #3498db;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.client-details {
+    margin-bottom: 15px;
+}
+
+.client-contact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+    color: #666;
+    font-size: 14px;
+}
+
+.client-stats {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: #888;
+}
+
+.client-stats .stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 💰 ESTIMATES STYLES */
+.estimates-container {
+    padding: 20px;
+}
+
+.estimates-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 20px;
+}
+
+.estimate-card {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.estimate-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.estimate-card.pending {
+    border-left: 4px solid #f39c12;
+}
+
+.estimate-card.approved {
+    border-left: 4px solid #27ae60;
+}
+
+.estimate-card.converted {
+    border-left: 4px solid #3498db;
+}
+
+.estimate-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.estimate-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 16px;
+}
+
+.estimate-status {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.estimate-status.pending {
+    background: #f39c12;
+    color: white;
+}
+
+.estimate-status.approved {
+    background: #27ae60;
+    color: white;
+}
+
+.estimate-status.converted {
+    background: #3498db;
+    color: white;
+}
+
+.estimate-details {
+    margin-bottom: 15px;
+}
+
+.estimate-details > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+    color: #666;
+    font-size: 14px;
+}
+
+.estimate-costs {
+    margin-bottom: 15px;
+}
+
+.cost-breakdown {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #666;
+}
+
+.total-cost {
+    text-align: right;
+    font-size: 16px;
+    color: #2c3e50;
+}
+
+.estimate-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn-pdf {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.3s ease;
+}
+
+.btn-pdf:hover {
+    background: #c0392b;
+}
+
+.btn-convert {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.3s ease;
+}
+
+.btn-convert:hover {
+    background: #229954;
+}
+
+/* ⏱️ TIMER STYLES */
+.operator-timer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.timer-display {
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    font-weight: bold;
+    color: #2c3e50;
+    background: #f8f9fa;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    min-width: 80px;
+    text-align: center;
+}
+
+.timer-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.timer-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.timer-btn.start {
+    background: #27ae60;
+}
+
+.timer-btn.start:hover {
+    background: #229954;
+}
+
+.timer-btn.pause {
+    background: #f39c12;
+}
+
+.timer-btn.pause:hover {
+    background: #e67e22;
+}
+
+.timer-btn.stop {
+    background: #e74c3c;
+}
+
+.timer-btn.stop:hover {
+    background: #c0392b;
+}
+
+/* Operator Status */
+.operator-status {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.operator-status.available {
+    background: #d4edda;
+    color: #155724;
+}
+
+.operator-status.working {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.operator-status.busy {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Operator Card Enhancements */
+.operator-card {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.operator-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-color: #3498db;
+}
+
+.operator-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.operator-name {
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+}
+
+/* 📋 CLIENT & ESTIMATE DETAILS MODALS */
+.client-details-modal,
+.estimate-details-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.client-details-modal.show,
+.estimate-details-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.client-info,
+.estimate-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.client-works,
+.estimate-description,
+.estimate-costs {
+    margin-bottom: 20px;
+}
+
+.works-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.work-summary {
+    background: white;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.work-summary:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-color: #3498db;
+}
+
+.work-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.work-vehicle {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.work-summary-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.work-description {
+    color: #666;
+    font-size: 14px;
+}
+
+.work-date {
+    color: #999;
+    font-size: 12px;
+}
+
+.cost-table {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid #e1e5e9;
+}
+
+.cost-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.cost-row:last-child {
+    border-bottom: none;
+}
+
+.cost-row.total {
+    border-top: 2px solid #2c3e50;
+    margin-top: 10px;
+    padding-top: 10px;
+    font-size: 16px;
+}
+
+.estimate-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* 🔧 FIX EXISTING STYLES */
+.work-status {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.work-status.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.work-status.in_progress {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.work-status.completed {
+    background: #d4edda;
+    color: #155724;
+}
+
+.work-status.paused {
+    background: #f8d7da;
+    color: #721c24;
 }

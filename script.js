@@ -95,6 +95,35 @@ let timers = {};
 let currentCalendarDate = new Date();
 let companyInfo = null;
 
+// 🏭 CONFIGURAZIONE REPARTI
+const DEPARTMENTS = {
+    verniciatura: {
+        name: 'Verniciatura',
+        icon: 'fas fa-spray-can',
+        color: '#e74c3c'
+    },
+    lattoneria: {
+        name: 'Lattoneria',
+        icon: 'fas fa-hammer',
+        color: '#f39c12'
+    },
+    meccanica: {
+        name: 'Meccanica',
+        icon: 'fas fa-cog',
+        color: '#3498db'
+    },
+    preparazione: {
+        name: 'Preparazione',
+        icon: 'fas fa-brush',
+        color: '#9b59b6'
+    },
+    lavaggio: {
+        name: 'Lavaggio',
+        icon: 'fas fa-tint',
+        color: '#1abc9c'
+    }
+};
+
 // 💾 DATI DI ESEMPIO
 const SAMPLE_WORKS = [
     {
@@ -314,6 +343,12 @@ function loadDashboardData() {
 
     // Popola dropdown clienti
     populateClientDropdown();
+
+    // Renderizza calendario
+    renderCalendar();
+
+    // Inizializza timer
+    initializeTimers();
 
     console.log('✅ Dati dashboard caricati');
 }
@@ -576,12 +611,17 @@ function setupForms() {
 async function handleNewWork(e) {
     e.preventDefault();
 
+    const clientSelect = document.getElementById('workClient');
+    const selectedClient = clients.find(c => c.id === clientSelect.value);
+
     const newWork = {
         vehicle: document.getElementById('workVehicle').value,
-        client: document.getElementById('workClient').value,
+        client: selectedClient ? selectedClient.name : clientSelect.options[clientSelect.selectedIndex]?.text || 'Cliente sconosciuto',
+        client_id: selectedClient ? selectedClient.id : null,
         description: document.getElementById('workDescription').value,
         department: document.getElementById('workDepartment').value,
-        priority: document.getElementById('workPriority').value
+        priority: document.getElementById('workPriority').value,
+        delivery_date: document.getElementById('workDeliveryDate').value || null
     };
 
     // Validazione
@@ -815,21 +855,48 @@ function assignWork(workId) {
 }
 
 // ▶️ INIZIA LAVORO
-function startWork(workId) {
+async function startWork(workId) {
     const work = works.find(w => w.id === workId);
     if (!work) return;
 
-    work.status = 'in_progress';
-    work.startedAt = new Date();
+    try {
+        const response = await fetch(`/api/works/${workId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                status: 'in_progress',
+                started_at: new Date().toISOString()
+            })
+        });
 
-    saveData();
-    loadDashboardData();
-    closeModal();
+        const result = await response.json();
 
-    // Avvia timer
-    startTimer(currentUser.operatorId);
+        if (result.success) {
+            // Aggiorna localmente
+            work.status = 'in_progress';
+            work.startedAt = new Date();
 
-    showToast('Avviato', 'Lavoro iniziato', 'success');
+            loadDashboardData();
+            closeModal();
+
+            // Avvia timer se l'utente ha un operatorId
+            if (currentUser && currentUser.operatorId) {
+                startTimer(currentUser.operatorId);
+            }
+
+            showToast('Avviato', `Lavoro ${work.id} avviato`, 'success');
+        } else {
+            showToast('Errore', result.error || 'Errore nell\'avvio del lavoro', 'error');
+        }
+    } catch (error) {
+        console.error('❌ Errore avvio lavoro:', error);
+        // Fallback locale
+        work.status = 'in_progress';
+        work.startedAt = new Date();
+        loadDashboardData();
+        closeModal();
+        showToast('Avviato', 'Lavoro avviato (offline)', 'warning');
+    }
 }
 
 // ⏸️ PAUSA LAVORO
@@ -892,52 +959,84 @@ function closeModal(element) {
 }
 
 // ⏱️ SISTEMA TIMER
-function startTimer(operatorId) {
-    if (timers[operatorId]) {
-        clearInterval(timers[operatorId].interval);
+window.startTimer = function(operatorId) {
+    console.log('🎯 Avvio timer per:', operatorId);
+
+    // Se il timer è già attivo, lo pausiamo
+    if (timers[operatorId] && timers[operatorId].interval) {
+        pauseTimer(operatorId);
+        return;
     }
 
-    timers[operatorId] = {
-        startTime: Date.now(),
-        elapsed: 0,
-        interval: setInterval(() => updateTimerDisplay(operatorId), 1000)
-    };
+    // Se il timer è in pausa, lo riprendiamo
+    if (timers[operatorId] && !timers[operatorId].interval) {
+        timers[operatorId].startTime = Date.now();
+        timers[operatorId].interval = setInterval(() => updateTimerDisplay(operatorId), 1000);
+    } else {
+        // Nuovo timer
+        timers[operatorId] = {
+            startTime: Date.now(),
+            elapsed: 0,
+            interval: setInterval(() => updateTimerDisplay(operatorId), 1000)
+        };
+    }
 
     updateTimerButton(operatorId, 'pause');
+    updateOperatorStatus(operatorId, 'working');
     console.log('⏱️ Timer avviato per:', operatorId);
-}
+};
 
-function pauseTimer(operatorId) {
-    if (!timers[operatorId]) return;
+window.pauseTimer = function(operatorId) {
+    console.log('⏸️ Pausa timer per:', operatorId);
+
+    if (!timers[operatorId] || !timers[operatorId].interval) return;
 
     clearInterval(timers[operatorId].interval);
     timers[operatorId].elapsed += Date.now() - timers[operatorId].startTime;
+    timers[operatorId].interval = null;
 
     updateTimerButton(operatorId, 'start');
+    updateOperatorStatus(operatorId, 'available');
     console.log('⏸️ Timer in pausa per:', operatorId);
-}
+};
 
-function stopTimer(operatorId) {
+window.stopTimer = function(operatorId) {
+    console.log('⏹️ Stop timer per:', operatorId);
+
     if (!timers[operatorId]) return;
 
-    clearInterval(timers[operatorId].interval);
-    const totalTime = timers[operatorId].elapsed + (Date.now() - timers[operatorId].startTime);
+    if (timers[operatorId].interval) {
+        clearInterval(timers[operatorId].interval);
+        timers[operatorId].elapsed += Date.now() - timers[operatorId].startTime;
+    }
+
+    const totalTime = timers[operatorId].elapsed;
 
     delete timers[operatorId];
     updateTimerDisplay(operatorId, 0);
     updateTimerButton(operatorId, 'start');
+    updateOperatorStatus(operatorId, 'available');
 
     console.log('⏹️ Timer fermato per:', operatorId, 'Tempo totale:', Math.round(totalTime / 1000), 's');
     return totalTime;
-}
+};
 
 function updateTimerDisplay(operatorId, time = null) {
     const display = document.querySelector(`[data-operator="${operatorId}"] .timer-display`);
-    if (!display) return;
+    if (!display) {
+        console.warn('⚠️ Timer display non trovato per:', operatorId);
+        return;
+    }
 
     let currentTime = time;
     if (currentTime === null && timers[operatorId]) {
-        currentTime = timers[operatorId].elapsed + (Date.now() - timers[operatorId].startTime);
+        if (timers[operatorId].interval) {
+            // Timer attivo
+            currentTime = timers[operatorId].elapsed + (Date.now() - timers[operatorId].startTime);
+        } else {
+            // Timer in pausa
+            currentTime = timers[operatorId].elapsed;
+        }
     }
 
     if (currentTime === null) currentTime = 0;
@@ -946,22 +1045,76 @@ function updateTimerDisplay(operatorId, time = null) {
     const minutes = Math.floor((currentTime % 3600000) / 60000);
     const seconds = Math.floor((currentTime % 60000) / 1000);
 
-    display.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    display.textContent = timeString;
+}
+
+function updateOperatorStatus(operatorId, status) {
+    const statusElement = document.querySelector(`[data-operator="${operatorId}"] .operator-status`);
+    if (!statusElement) return;
+
+    // Rimuovi tutte le classi di status
+    statusElement.classList.remove('available', 'working', 'busy');
+
+    // Aggiungi la nuova classe
+    statusElement.classList.add(status);
+
+    // Aggiorna il testo
+    const statusText = {
+        'available': 'Disponibile',
+        'working': 'Al Lavoro',
+        'busy': 'Occupato'
+    };
+
+    statusElement.textContent = statusText[status] || 'Disponibile';
 }
 
 function updateTimerButton(operatorId, state) {
     const button = document.querySelector(`[data-operator="${operatorId}"] .timer-btn`);
-    if (!button) return;
+    if (!button) {
+        console.warn('⚠️ Timer button non trovato per:', operatorId);
+        return;
+    }
 
-    button.className = `timer-btn ${state}`;
+    // Rimuovi tutte le classi di stato
+    button.classList.remove('start', 'pause', 'stop');
+    button.classList.add(state);
 
     if (state === 'start') {
         button.innerHTML = '<i class="fas fa-play"></i>';
-        button.onclick = () => startTimer(operatorId);
+        button.onclick = () => window.startTimer(operatorId);
+        button.title = 'Avvia Timer';
     } else if (state === 'pause') {
         button.innerHTML = '<i class="fas fa-pause"></i>';
-        button.onclick = () => pauseTimer(operatorId);
+        button.onclick = () => window.pauseTimer(operatorId);
+        button.title = 'Pausa Timer';
+    } else if (state === 'stop') {
+        button.innerHTML = '<i class="fas fa-stop"></i>';
+        button.onclick = () => window.stopTimer(operatorId);
+        button.title = 'Ferma Timer';
     }
+}
+
+// 🚀 INIZIALIZZA TIMER
+function initializeTimers() {
+    console.log('🚀 Inizializzando timer operatori...');
+
+    const operators = ['andrea', 'rocco', 'luca', 'francesco', 'extra'];
+
+    operators.forEach(operatorId => {
+        // Reset timer display
+        updateTimerDisplay(operatorId, 0);
+
+        // Reset button state
+        updateTimerButton(operatorId, 'start');
+
+        // Reset operator status
+        updateOperatorStatus(operatorId, 'available');
+
+        console.log(`✅ Timer inizializzato per: ${operatorId}`);
+    });
+
+    console.log('✅ Tutti i timer inizializzati');
 }
 
 // 🔄 AGGIORNA DASHBOARD
@@ -1746,6 +1899,159 @@ function selectClient(clientId) {
     showClientDetails(client);
 }
 
+function showClientDetails(client) {
+    const clientWorks = works.filter(w => w.client === client.name);
+
+    const modal = document.createElement('div');
+    modal.className = 'client-details-modal';
+    modal.innerHTML = `
+        <div class="modal-overlay" onclick="closeClientDetailsModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-user"></i> ${client.name}</h3>
+                <button class="modal-close" onclick="closeClientDetailsModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="client-info">
+                    <div class="info-row">
+                        <strong>Telefono:</strong> ${client.phone || 'N/A'}
+                    </div>
+                    <div class="info-row">
+                        <strong>Email:</strong> ${client.email || 'N/A'}
+                    </div>
+                    <div class="info-row">
+                        <strong>Indirizzo:</strong> ${client.address || 'N/A'}
+                    </div>
+                    <div class="info-row">
+                        <strong>Cliente dal:</strong> ${new Date(client.created_at).toLocaleDateString('it-IT')}
+                    </div>
+                </div>
+
+                <div class="client-works">
+                    <h4>Storico Lavori (${clientWorks.length})</h4>
+                    ${clientWorks.length > 0 ? `
+                        <div class="works-list">
+                            ${clientWorks.map(work => `
+                                <div class="work-summary" onclick="selectWork('${work.id}')">
+                                    <div class="work-summary-header">
+                                        <span class="work-vehicle">${work.vehicle}</span>
+                                        <span class="work-status ${work.status}">${getStatusText(work.status)}</span>
+                                    </div>
+                                    <div class="work-summary-body">
+                                        <div class="work-description">${work.description}</div>
+                                        <div class="work-date">${new Date(work.createdAt).toLocaleDateString('it-IT')}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : '<p>Nessun lavoro trovato per questo cliente</p>'}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeClientDetailsModal() {
+    const modal = document.querySelector('.client-details-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+function selectEstimate(estimateId) {
+    const estimate = estimates.find(e => e.id === estimateId);
+    if (!estimate) return;
+
+    // Mostra dettagli preventivo
+    showEstimateDetails(estimate);
+}
+
+function showEstimateDetails(estimate) {
+    const modal = document.createElement('div');
+    modal.className = 'estimate-details-modal';
+    modal.innerHTML = `
+        <div class="modal-overlay" onclick="closeEstimateDetailsModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-invoice-dollar"></i> Preventivo ${estimate.estimate_number || estimate.id}</h3>
+                <button class="modal-close" onclick="closeEstimateDetailsModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="estimate-info">
+                    <div class="info-row">
+                        <strong>Cliente:</strong> ${estimate.client_name}
+                    </div>
+                    <div class="info-row">
+                        <strong>Veicolo:</strong> ${estimate.vehicle}
+                    </div>
+                    <div class="info-row">
+                        <strong>Reparto:</strong> ${companyInfo?.departments[estimate.department]?.name || estimate.department}
+                    </div>
+                    <div class="info-row">
+                        <strong>Priorità:</strong> ${getPriorityText(estimate.priority)}
+                    </div>
+                    <div class="info-row">
+                        <strong>Stato:</strong> ${getEstimateStatusText(estimate.status)}
+                    </div>
+                </div>
+
+                <div class="estimate-description">
+                    <h4>Descrizione Lavori</h4>
+                    <p>${estimate.description}</p>
+                </div>
+
+                <div class="estimate-costs">
+                    <h4>Dettaglio Costi</h4>
+                    <div class="cost-table">
+                        <div class="cost-row">
+                            <span>Manodopera (${estimate.labor_hours} ore × €${estimate.labor_rate})</span>
+                            <span>€${estimate.labor_cost.toFixed(2)}</span>
+                        </div>
+                        <div class="cost-row">
+                            <span>Ricambi e materiali</span>
+                            <span>€${estimate.parts_cost.toFixed(2)}</span>
+                        </div>
+                        <div class="cost-row total">
+                            <strong>Totale (IVA esclusa)</strong>
+                            <strong>€${estimate.total_cost.toFixed(2)}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="estimate-actions">
+                    <button class="btn-pdf" onclick="generateEstimatePDF('${estimate.id}')">
+                        <i class="fas fa-file-pdf"></i> Genera PDF
+                    </button>
+                    ${estimate.status === 'pending' ? `
+                        <button class="btn-convert" onclick="convertEstimateToWork('${estimate.id}')">
+                            <i class="fas fa-arrow-right"></i> Converti in Lavoro
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeEstimateDetailsModal() {
+    const modal = document.querySelector('.estimate-details-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
 function populateClientDropdown() {
     const dropdown = document.getElementById('workClient');
     if (!dropdown) return;
@@ -2046,4 +2352,176 @@ async function convertEstimateToWork(estimateId) {
     }
 }
 
+// 📅 GESTIONE CALENDARIO
+function renderCalendar() {
+    const container = document.getElementById('calendar');
+    if (!container) return;
+
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+
+    // Aggiorna il titolo del mese
+    const monthNames = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                       'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    const monthTitle = document.getElementById('currentMonth');
+    if (monthTitle) {
+        monthTitle.textContent = `${monthNames[month]} ${year}`;
+    }
+
+    // Calcola i giorni del mese
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    // Genera il calendario
+    let calendarHTML = '';
+
+    // Header giorni della settimana
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+    dayNames.forEach(day => {
+        calendarHTML += `<div class="calendar-header-day">${day}</div>`;
+    });
+
+    // Giorni vuoti all'inizio
+    for (let i = 0; i < startingDayOfWeek; i++) {
+        calendarHTML += '<div class="calendar-day other-month"></div>';
+    }
+
+    // Giorni del mese
+    for (let day = 1; day <= daysInMonth; day++) {
+        const currentDate = new Date(year, month, day);
+        const isToday = isDateToday(currentDate);
+        const dayWorks = getWorksForDate(currentDate);
+
+        let dayClass = 'calendar-day';
+        if (isToday) dayClass += ' today';
+
+        let worksHTML = '';
+        dayWorks.forEach(work => {
+            const priorityClass = work.priority;
+            worksHTML += `
+                <div class="calendar-work ${priorityClass}" title="${work.description}">
+                    ${work.vehicle.substring(0, 15)}${work.vehicle.length > 15 ? '...' : ''}
+                </div>
+            `;
+        });
+
+        calendarHTML += `
+            <div class="${dayClass}" data-date="${currentDate.toISOString().split('T')[0]}">
+                <div class="calendar-day-number">${day}</div>
+                <div class="calendar-works">${worksHTML}</div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = calendarHTML;
+}
+
+function isDateToday(date) {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+}
+
+function getWorksForDate(date) {
+    const dateString = date.toISOString().split('T')[0];
+    return works.filter(work => {
+        if (!work.deliveryDate) return false;
+        const workDate = new Date(work.deliveryDate).toISOString().split('T')[0];
+        return workDate === dateString;
+    });
+}
+
+function previousMonth() {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+    renderCalendar();
+}
+
+function nextMonth() {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+    renderCalendar();
+}
+
+// Aggiungi stili CSS per il calendario
+const calendarStyles = `
+<style>
+.calendar-header-day {
+    background: #f8f9fa;
+    padding: 10px;
+    text-align: center;
+    font-weight: bold;
+    color: #666;
+    border: 1px solid #eee;
+}
+
+.calendar-day-number {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.calendar-works {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.calendar-work {
+    background: #3498db;
+    color: white;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.calendar-work.urgent {
+    background: #e74c3c;
+}
+
+.calendar-work.high {
+    background: #f39c12;
+}
+
+.calendar-work.medium {
+    background: #3498db;
+}
+
+.calendar-work.low {
+    background: #95a5a6;
+}
+</style>
+`;
+
+// Aggiungi gli stili al documento
+if (!document.getElementById('calendar-styles')) {
+    const styleElement = document.createElement('div');
+    styleElement.id = 'calendar-styles';
+    styleElement.innerHTML = calendarStyles;
+    document.head.appendChild(styleElement);
+}
+
+// 🧪 FUNZIONE TEST TIMER (per debug)
+window.testTimers = function() {
+    console.log('🧪 Test timer avviato...');
+
+    const operators = ['andrea', 'rocco', 'luca', 'francesco', 'extra'];
+
+    operators.forEach(operatorId => {
+        const display = document.querySelector(`[data-operator="${operatorId}"] .timer-display`);
+        const button = document.querySelector(`[data-operator="${operatorId}"] .timer-btn`);
+        const status = document.querySelector(`[data-operator="${operatorId}"] .operator-status`);
+
+        console.log(`Operatore ${operatorId}:`, {
+            display: display ? 'OK' : 'MANCANTE',
+            button: button ? 'OK' : 'MANCANTE',
+            status: status ? 'OK' : 'MANCANTE'
+        });
+    });
+
+    console.log('Timer globali:', { startTimer: typeof window.startTimer, pauseTimer: typeof window.pauseTimer, stopTimer: typeof window.stopTimer });
+    console.log('Timer attivi:', timers);
+};
+
 console.log('🚗 Sistema Carrozzeria completamente caricato e funzionante!');
+console.log('🧪 Per testare i timer, usa: testTimers()');
+console.log('⏱️ Timer disponibili:', { startTimer: typeof window.startTimer, pauseTimer: typeof window.pauseTimer, stopTimer: typeof window.stopTimer });
