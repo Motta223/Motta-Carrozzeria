@@ -216,6 +216,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     checkExistingLogin();
 
     console.log('✅ Sistema inizializzato correttamente');
+
+    // Auto-test dopo 2 secondi
+    setTimeout(() => {
+        console.log('🧪 Avvio auto-test sistema...');
+        if (typeof window.testTimers === 'function') {
+            window.testTimers();
+        }
+    }, 2000);
 });
 
 // 🔐 SISTEMA LOGIN
@@ -351,6 +359,12 @@ function loadDashboardData() {
     initializeTimers();
 
     console.log('✅ Dati dashboard caricati');
+    console.log('📊 Statistiche:', {
+        works: works.length,
+        clients: clients.length,
+        estimates: estimates.length,
+        timers: Object.keys(timers).length
+    });
 }
 
 // 📈 AGGIORNA STATISTICHE RAPIDE
@@ -1025,7 +1039,10 @@ function updateTimerDisplay(operatorId, time = null) {
     const display = document.querySelector(`[data-operator="${operatorId}"] .timer-display`);
     if (!display) {
         console.warn('⚠️ Timer display non trovato per:', operatorId);
-        return;
+        // Prova a trovare con selettore alternativo
+        const altDisplay = document.querySelector(`#${operatorId}-timer .timer-display`);
+        if (!altDisplay) return;
+        display = altDisplay;
     }
 
     let currentTime = time;
@@ -1039,7 +1056,7 @@ function updateTimerDisplay(operatorId, time = null) {
         }
     }
 
-    if (currentTime === null) currentTime = 0;
+    if (currentTime === null || currentTime < 0) currentTime = 0;
 
     const hours = Math.floor(currentTime / 3600000);
     const minutes = Math.floor((currentTime % 3600000) / 60000);
@@ -1070,10 +1087,14 @@ function updateOperatorStatus(operatorId, status) {
 }
 
 function updateTimerButton(operatorId, state) {
-    const button = document.querySelector(`[data-operator="${operatorId}"] .timer-btn`);
+    let button = document.querySelector(`[data-operator="${operatorId}"] .timer-btn`);
     if (!button) {
-        console.warn('⚠️ Timer button non trovato per:', operatorId);
-        return;
+        // Prova selettore alternativo
+        button = document.querySelector(`#${operatorId}-timer .timer-btn`);
+        if (!button) {
+            console.warn('⚠️ Timer button non trovato per:', operatorId);
+            return;
+        }
     }
 
     // Rimuovi tutte le classi di stato
@@ -1082,15 +1103,33 @@ function updateTimerButton(operatorId, state) {
 
     if (state === 'start') {
         button.innerHTML = '<i class="fas fa-play"></i>';
-        button.onclick = () => window.startTimer(operatorId);
+        button.onclick = () => {
+            if (typeof window.startTimer === 'function') {
+                window.startTimer(operatorId);
+            } else {
+                console.error('❌ startTimer non è una funzione');
+            }
+        };
         button.title = 'Avvia Timer';
     } else if (state === 'pause') {
         button.innerHTML = '<i class="fas fa-pause"></i>';
-        button.onclick = () => window.pauseTimer(operatorId);
+        button.onclick = () => {
+            if (typeof window.pauseTimer === 'function') {
+                window.pauseTimer(operatorId);
+            } else {
+                console.error('❌ pauseTimer non è una funzione');
+            }
+        };
         button.title = 'Pausa Timer';
     } else if (state === 'stop') {
         button.innerHTML = '<i class="fas fa-stop"></i>';
-        button.onclick = () => window.stopTimer(operatorId);
+        button.onclick = () => {
+            if (typeof window.stopTimer === 'function') {
+                window.stopTimer(operatorId);
+            } else {
+                console.error('❌ stopTimer non è una funzione');
+            }
+        };
         button.title = 'Ferma Timer';
     }
 }
@@ -2054,10 +2093,20 @@ function closeEstimateDetailsModal() {
 
 function populateClientDropdown() {
     const dropdown = document.getElementById('workClient');
-    if (!dropdown) return;
+    if (!dropdown) {
+        console.warn('⚠️ Dropdown clienti non trovato');
+        return;
+    }
+
+    if (!clients || clients.length === 0) {
+        dropdown.innerHTML = '<option value="">Nessun cliente disponibile</option>';
+        return;
+    }
 
     dropdown.innerHTML = '<option value="">Seleziona cliente</option>' +
         clients.map(client => `<option value="${client.id}" data-name="${client.name}">${client.name}</option>`).join('');
+
+    console.log('✅ Dropdown clienti popolato con', clients.length, 'clienti');
 }
 
 // 💰 GESTIONE PREVENTIVI
@@ -2514,12 +2563,37 @@ window.testTimers = function() {
         console.log(`Operatore ${operatorId}:`, {
             display: display ? 'OK' : 'MANCANTE',
             button: button ? 'OK' : 'MANCANTE',
-            status: status ? 'OK' : 'MANCANTE'
+            status: status ? 'OK' : 'MANCANTE',
+            onclick: button ? button.onclick : 'N/A'
         });
+
+        // Test diretto del timer
+        if (display && button) {
+            console.log(`✅ ${operatorId} - Elementi trovati, timer pronto`);
+        } else {
+            console.log(`❌ ${operatorId} - Elementi mancanti`);
+        }
     });
 
-    console.log('Timer globali:', { startTimer: typeof window.startTimer, pauseTimer: typeof window.pauseTimer, stopTimer: typeof window.stopTimer });
+    console.log('Timer globali:', {
+        startTimer: typeof window.startTimer,
+        pauseTimer: typeof window.pauseTimer,
+        stopTimer: typeof window.stopTimer
+    });
     console.log('Timer attivi:', timers);
+
+    // Test automatico di un timer
+    console.log('🧪 Test automatico timer Andrea...');
+    if (typeof window.startTimer === 'function') {
+        window.startTimer('andrea');
+        setTimeout(() => {
+            console.log('Timer Andrea dopo 2 secondi:', timers['andrea']);
+            if (typeof window.pauseTimer === 'function') {
+                window.pauseTimer('andrea');
+                console.log('Timer Andrea in pausa');
+            }
+        }, 2000);
+    }
 };
 
 console.log('🚗 Sistema Carrozzeria completamente caricato e funzionante!');
