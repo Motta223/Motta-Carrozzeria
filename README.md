@@ -77,17 +77,18 @@ npm start
 http://localhost:3000
 ```
 
-## 🔐 Credenziali di Accesso
+## 🔐 Accesso al Sistema
 
-### Amministratore (Roberto)
-- **Username:** `admin`
-- **Password:** `admin123`
-- **Permessi:** Completi (caricare, modificare, eliminare lavori, gestire utenti)
+### Credenziali Demo
+Per motivi di sicurezza, le credenziali di accesso sono configurate nel file `script.js`.
+Contattare l'amministratore per ottenere le credenziali di accesso.
 
-### Dipendenti
-- **Username:** `dipendente1` | **Password:** `dip123` | **Nome:** Mario Rossi
-- **Username:** `dipendente2` | **Password:** `dip123` | **Nome:** Luigi Verdi
-- **Permessi:** Visualizzare lavori e aggiornare stati
+### Ruoli Disponibili
+- **Admin**: Accesso completo al sistema
+- **Manager**: Gestione lavori e operatori
+- **Employee**: Accesso limitato al proprio reparto
+
+**⚠️ IMPORTANTE**: Modificare le credenziali predefinite prima del deploy in produzione!
 
 ## 📱 Funzionalità Principali
 
