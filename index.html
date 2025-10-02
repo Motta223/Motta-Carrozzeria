@@ -33,9 +33,45 @@
                 </button>
             </form>
             
-            <!-- Security Notice -->
-            <div class="security-notice">
-                <p><i class="fas fa-shield-alt"></i> Contattare l'amministratore per le credenziali di accesso</p>
+            <!-- Quick Login Buttons -->
+            <div class="quick-login">
+                <h4>🚀 Accesso Rapido</h4>
+                <div class="quick-buttons">
+                    <button class="quick-btn manager" onclick="quickLogin('admin', 'admin')">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Manager</span>
+                    </button>
+                    <button class="quick-btn employee" onclick="quickLogin('rocco', 'rocco')">
+                        <i class="fas fa-hammer"></i>
+                        <span>Rocco</span>
+                    </button>
+                    <button class="quick-btn employee" onclick="quickLogin('andrea', 'andrea')">
+                        <i class="fas fa-spray-can"></i>
+                        <span>Andrea</span>
+                    </button>
+                    <button class="quick-btn employee" onclick="quickLogin('luca', 'luca')">
+                        <i class="fas fa-cog"></i>
+                        <span>Luca</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Credentials Info -->
+            <div class="credentials-info">
+                <details>
+                    <summary><i class="fas fa-info-circle"></i> Tutte le Credenziali</summary>
+                    <div class="credentials-list">
+                        <div class="cred-section">
+                            <h5>👨‍💼 Manager</h5>
+                            <p><code>admin/admin</code> - <code>manager/manager</code></p>
+                        </div>
+                        <div class="cred-section">
+                            <h5>👨‍🔧 Dipendenti</h5>
+                            <p><code>rocco/rocco</code> - <code>andrea/andrea</code> - <code>luca/luca</code></p>
+                            <p><code>francesco/francesco</code> - <code>extra/extra</code></p>
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
     </div>

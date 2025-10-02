@@ -95,35 +95,6 @@ let timers = {};
 let currentCalendarDate = new Date();
 let companyInfo = null;
 
-// 🏭 CONFIGURAZIONE REPARTI
-const DEPARTMENTS = {
-    verniciatura: {
-        name: 'Verniciatura',
-        icon: 'fas fa-spray-can',
-        color: '#e74c3c'
-    },
-    lattoneria: {
-        name: 'Lattoneria',
-        icon: 'fas fa-hammer',
-        color: '#f39c12'
-    },
-    meccanica: {
-        name: 'Meccanica',
-        icon: 'fas fa-cog',
-        color: '#3498db'
-    },
-    preparazione: {
-        name: 'Preparazione',
-        icon: 'fas fa-brush',
-        color: '#9b59b6'
-    },
-    lavaggio: {
-        name: 'Lavaggio',
-        icon: 'fas fa-tint',
-        color: '#1abc9c'
-    }
-};
-
 // 💾 DATI DI ESEMPIO
 const SAMPLE_WORKS = [
     {
